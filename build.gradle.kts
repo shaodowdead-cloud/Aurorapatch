@@ -1,4 +1,3 @@
-git config --global user.name "Ваше Имя"
 plugins {
     java
     // Add the Shadow plugin if you want to shade dependencies (not required here)
