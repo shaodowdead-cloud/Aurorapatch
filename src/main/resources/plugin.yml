@@ -1,0 +1,10 @@
+name: AuroraPotionConsumeAddon
+version: 1.0.0
+main: gg.auroramc.potionaddon.PotionConsumeAddon
+api-version: "1.21"
+depend: [AuroraQuests]
+description: |
+  Add-on for AuroraQuests that fixes potion consumption detection.
+  Provides a custom consume handler that differentiates potion base types and levels when players
+  drink a potion. It reflects into AuroraQuests at runtime to progress the appropriate
+  Consume objectives based on the potion consumed.
