@@ -8,7 +8,7 @@ version = "1.0.0"
 
 java {
     // Target Java 17+ since Minecraft 1.21.4 runs on this
-    toolchain.languageVersion.set(JavaLanguageVersion.of(17))
+    toolchain.languageVersion.set(JavaLanguageVersion.of(24))
 }
 
 repositories {
@@ -20,8 +20,8 @@ repositories {
 
 dependencies {
     // Provide-only dependencies; they are not bundled into the final jar
-    compileOnly("gg.auroramc:AuroraQuests:2.20")
-    compileOnly("gg.auroramc:Aurora:2.20")
+    compileOnly("gg.auroramc:AuroraQuests:2.2.0")
+    compileOnly("gg.auroramc:Aurora:2.5.1")
     compileOnly("io.papermc.paper:paper-api:1.21.4-R0.1-SNAPSHOT")
 }
 
