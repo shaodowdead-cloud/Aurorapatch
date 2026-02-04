@@ -9,7 +9,6 @@ import org.bukkit.event.player.PlayerItemConsumeEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.PotionMeta;
 import org.bukkit.plugin.java.JavaPlugin;
-import org.bukkit.potion.PotionData;
 import org.bukkit.potion.PotionType;
 
 import java.lang.reflect.Constructor;
@@ -17,7 +16,6 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Collection;
 import java.util.List;
-import java.util.Locale;
 
 /**
  * Add-on for AuroraQuests that differentiates potion consumption by base type and level.
@@ -76,24 +74,18 @@ public final class PotionConsumeAddon extends JavaPlugin implements Listener {
             return;
         }
 
-        PotionData data = potionMeta.getBasePotionData();
-        PotionType type = data.getType();
+        PotionType type = potionMeta.getBasePotionType();
+        if (type == null) {
+            return;
+        }
         // Some potion types such as WATER or MUNDANE are not considered quest potions.
-        if (type == PotionType.UNCRAFTABLE || type == PotionType.WATER || type == PotionType.MUNDANE || type == PotionType.THICK || type == PotionType.AWKWARD) {
+        if (type == PotionType.WATER || type == PotionType.MUNDANE || type == PotionType.THICK || type == PotionType.AWKWARD) {
             return;
         }
 
-        // Determine the variant key similar to AuroraQuests' convention:
-        // base: "strength", long: "long_strength", strong: "strong_strength".
-        String baseKey = type.name().toLowerCase(Locale.ROOT);
-        String variantKey;
-        if (data.isUpgraded()) {
-            variantKey = "strong_" + baseKey;
-        } else if (data.isExtended()) {
-            variantKey = "long_" + baseKey;
-        } else {
-            variantKey = baseKey;
-        }
+        // PotionType already encodes long/strong variants (e.g. LONG_STRENGTH).
+        // Use the namespaced key to match AuroraQuests' potion type ids.
+        String variantKey = type.getKey().getKey();
 
         progressConsumeObjectives(event.getPlayer(), variantKey);
     }
