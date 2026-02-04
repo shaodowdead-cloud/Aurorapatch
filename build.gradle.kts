@@ -16,12 +16,15 @@ repositories {
     // AuroraMC and Paper repositories are required to compile against their APIs
     maven("https://repo.auroramc.gg/releases/")
     maven("https://repo.papermc.io/repository/maven-public/")
+    flatDir {
+        dirs("lib")
+    }
 }
 
 dependencies {
     // Provide-only dependencies; they are not bundled into the final jar
-    compileOnly("gg.auroramc:AuroraQuests:2.2.0")
-    compileOnly("gg.auroramc:Aurora:2.5.1")
+    compileOnly(files("lib/AuroraQuests-2.2.0.jar"))
+    compileOnly(files("lib/Aurora-2.5.1.jar"))
     compileOnly("io.papermc.paper:paper-api:1.21.4-R0.1-SNAPSHOT")
 }
 
