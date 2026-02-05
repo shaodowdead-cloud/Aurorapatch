@@ -7,8 +7,12 @@ group = "gg.auroramc.potionaddon"
 version = "1.0.0"
 
 java {
-    // Target Java 17+ since Minecraft 1.21.4 runs on this
-    toolchain.languageVersion.set(JavaLanguageVersion.of(24))
+    // Target Java 21 since Minecraft 1.21.4 runs on this
+    toolchain.languageVersion.set(JavaLanguageVersion.of(21))
+}
+
+tasks.withType<JavaCompile>().configureEach {
+    options.release.set(21)
 }
 
 repositories {
