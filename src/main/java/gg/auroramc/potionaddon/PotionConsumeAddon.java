@@ -122,9 +122,10 @@ public final class PotionConsumeAddon extends JavaPlugin implements Listener {
                 return;
             }
             // Preload classes we need via reflection
-            Class<?> typeIdClass = Class.forName("gg.auroramc.quests.api.objective.meta.TypeId");
+            Class<?> typeIdClass = Class.forName("gg.auroramc.aurora.api.item.TypeId");
             Class<?> objectiveMetaClass = Class.forName("gg.auroramc.quests.api.objective.ObjectiveMeta");
-            Class<?> consumeObjectiveClass = Class.forName("gg.auroramc.quests.api.objective.types.ConsumeObjective");
+            Class<?> consumeObjectiveClass = Class.forName("gg.auroramc.quests.objective.ConsumeObjective");
+            Class<?> typedObjectiveClass = Class.forName("gg.auroramc.quests.api.objective.TypedObjective");
 
             // Prepare TypeId constructor: new TypeId(namespace, key)
             Constructor<?> typeIdConstructor = typeIdClass.getConstructor(String.class, String.class);
@@ -146,11 +147,12 @@ public final class PotionConsumeAddon extends JavaPlugin implements Listener {
                         // Create a TypeId for the potion variant
                         Object typeId = typeIdConstructor.newInstance("minecraft", potionKey);
                         // Build the objective meta
-                        Method metaMethod = objective.getClass().getMethod("meta", typeIdClass);
+                        Method metaMethod = typedObjectiveClass.getDeclaredMethod("meta", typeIdClass);
+                        metaMethod.setAccessible(true);
                         Object objectiveMeta = metaMethod.invoke(objective, typeId);
                         // Progress the objective by 1
-                        Method progressMethod = objective.getClass().getMethod("progress", int.class, objectiveMetaClass);
-                        progressMethod.invoke(objective, 1, objectiveMeta);
+                        Method progressMethod = objective.getClass().getMethod("progress", double.class, objectiveMetaClass);
+                        progressMethod.invoke(objective, 1.0d, objectiveMeta);
                     }
                 }
             }
