@@ -39,6 +39,7 @@ public class QuestGuiListener implements Listener {
                 && !title.startsWith(QuestGuiManager.GUILD_TITLE_PREFIX)
                 && !title.startsWith(QuestGuiManager.QUEST_TITLE_PREFIX)
                 && !title.startsWith(QuestGuiManager.TASKS_TITLE_PREFIX)
+                && !title.startsWith(QuestGuiManager.TASK_ACTION_TITLE_PREFIX)
                 && !title.startsWith(QuestGuiManager.DELETE_TITLE_PREFIX)) {
             return;
         }
@@ -65,6 +66,10 @@ public class QuestGuiListener implements Listener {
         }
         if (title.startsWith(QuestGuiManager.TASKS_TITLE_PREFIX)) {
             handleTaskMenuClick(player, event, clicked);
+            return;
+        }
+        if (title.startsWith(QuestGuiManager.TASK_ACTION_TITLE_PREFIX)) {
+            handleTaskActionMenuClick(player, event.getSlot(), clicked);
             return;
         }
         handleQuestMenuClick(player, clicked);
@@ -284,9 +289,7 @@ public class QuestGuiListener implements Listener {
             return;
         }
         if (event.isRightClick()) {
-            player.closeInventory();
-            manager.beginTaskChatInput(playerId, QuestGuiManager.ChatAction.SET_TASK_ACTION, questFile, taskKey);
-            player.sendMessage(ChatColor.YELLOW + "Enter action for task " + taskKey + " (or type 'cancel').");
+            player.openInventory(manager.createTaskActionMenu(playerId, questFile, taskKey));
             return;
         }
         QuestGuiManager.QuestDifficulty difficulty = manager.getTaskDifficulty(questFile, taskKey);
@@ -297,6 +300,34 @@ public class QuestGuiListener implements Listener {
             player.sendMessage(ChatColor.YELLOW + "Task " + taskKey + " difficulty set to " + next.getDisplayName() + ChatColor.YELLOW + ".");
         } catch (IOException e) {
             player.sendMessage(ChatColor.RED + "Failed to update task difficulty: " + e.getMessage());
+        }
+    }
+
+    private void handleTaskActionMenuClick(Player player, int slot, ItemStack clicked) {
+        UUID playerId = player.getUniqueId();
+        Path questFile = manager.getSelectedQuest(playerId);
+        String taskKey = manager.getSelectedTask(playerId);
+        if (questFile == null || taskKey == null) {
+            player.closeInventory();
+            return;
+        }
+
+        if (slot == 49 && clicked.getType() == Material.ARROW) {
+            player.openInventory(manager.createTaskMenu(playerId, questFile));
+            return;
+        }
+
+        Map<Integer, String> slots = manager.getTaskActionMenuSlots(playerId);
+        if (!slots.containsKey(slot)) {
+            return;
+        }
+        String action = slots.get(slot);
+        try {
+            manager.updateTaskAction(questFile, taskKey, action);
+            player.openInventory(manager.createTaskMenu(playerId, questFile));
+            player.sendMessage(ChatColor.GREEN + "Task " + taskKey + " action set to " + action + ".");
+        } catch (IOException e) {
+            player.sendMessage(ChatColor.RED + "Failed to update task action: " + e.getMessage());
         }
     }
 
