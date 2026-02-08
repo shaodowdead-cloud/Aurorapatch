@@ -36,7 +36,9 @@ public class QuestGuiListener implements Listener {
         }
         String title = event.getView().getTitle();
         if (!title.startsWith(QuestGuiManager.MAIN_TITLE)
+                && !title.startsWith(QuestGuiManager.GUILD_TITLE_PREFIX)
                 && !title.startsWith(QuestGuiManager.QUEST_TITLE_PREFIX)
+                && !title.startsWith(QuestGuiManager.TASKS_TITLE_PREFIX)
                 && !title.startsWith(QuestGuiManager.DELETE_TITLE_PREFIX)) {
             return;
         }
@@ -50,11 +52,19 @@ public class QuestGuiListener implements Listener {
 
         UUID playerId = player.getUniqueId();
         if (title.startsWith(QuestGuiManager.MAIN_TITLE)) {
-            handleMainMenuClick(player, event.getSlot(), clicked);
+            handleGuildMenuClick(player, event.getSlot(), clicked);
+            return;
+        }
+        if (title.startsWith(QuestGuiManager.GUILD_TITLE_PREFIX)) {
+            handleGuildQuestMenuClick(player, event.getSlot(), clicked);
             return;
         }
         if (title.startsWith(QuestGuiManager.DELETE_TITLE_PREFIX)) {
             handleDeleteMenuClick(player, clicked);
+            return;
+        }
+        if (title.startsWith(QuestGuiManager.TASKS_TITLE_PREFIX)) {
+            handleTaskMenuClick(player, event.getSlot(), clicked);
             return;
         }
         handleQuestMenuClick(player, clicked);
@@ -110,9 +120,33 @@ public class QuestGuiListener implements Listener {
         });
     }
 
-    private void handleMainMenuClick(Player player, int slot, ItemStack clicked) {
+    private void handleGuildMenuClick(Player player, int slot, ItemStack clicked) {
         UUID playerId = player.getUniqueId();
-        Map<Integer, Path> slots = manager.getMainMenuSlots(playerId);
+        Map<Integer, String> slots = manager.getGuildMenuSlots(playerId);
+        if (slots.containsKey(slot)) {
+            String guild = slots.get(slot);
+            player.openInventory(manager.createGuildQuestMenu(playerId, guild, 0));
+            return;
+        }
+
+        if (slot == 46) {
+            player.openInventory(manager.createMainMenu(playerId, manager.getCurrentGuildPage(playerId)));
+            return;
+        }
+        if (slot == 52) {
+            int page = manager.getCurrentGuildPage(playerId) - 1;
+            player.openInventory(manager.createMainMenu(playerId, page));
+            return;
+        }
+        if (slot == 53) {
+            int page = manager.getCurrentGuildPage(playerId) + 1;
+            player.openInventory(manager.createMainMenu(playerId, page));
+        }
+    }
+
+    private void handleGuildQuestMenuClick(Player player, int slot, ItemStack clicked) {
+        UUID playerId = player.getUniqueId();
+        Map<Integer, Path> slots = manager.getGuildQuestMenuSlots(playerId);
         if (slots.containsKey(slot)) {
             Path questFile = slots.get(slot);
             Inventory questMenu = manager.createQuestMenu(playerId, questFile);
@@ -127,17 +161,24 @@ public class QuestGuiListener implements Listener {
             return;
         }
         if (slot == 46) {
-            player.openInventory(manager.createMainMenu(playerId, manager.getCurrentPage(playerId)));
+            String guild = manager.getSelectedGuild(playerId);
+            player.openInventory(manager.createGuildQuestMenu(playerId, guild, manager.getCurrentPage(playerId)));
+            return;
+        }
+        if (slot == 48) {
+            player.openInventory(manager.createMainMenu(playerId, manager.getCurrentGuildPage(playerId)));
             return;
         }
         if (slot == 52) {
             int page = manager.getCurrentPage(playerId) - 1;
-            player.openInventory(manager.createMainMenu(playerId, page));
+            String guild = manager.getSelectedGuild(playerId);
+            player.openInventory(manager.createGuildQuestMenu(playerId, guild, page));
             return;
         }
         if (slot == 53) {
             int page = manager.getCurrentPage(playerId) + 1;
-            player.openInventory(manager.createMainMenu(playerId, page));
+            String guild = manager.getSelectedGuild(playerId);
+            player.openInventory(manager.createGuildQuestMenu(playerId, guild, page));
         }
     }
 
@@ -154,6 +195,10 @@ public class QuestGuiListener implements Listener {
             player.closeInventory();
             manager.openEditor(player, questFile);
             player.sendMessage(ChatColor.GREEN + "Editing quest: " + questFile.getFileName());
+            return;
+        }
+        if (clicked.getType() == Material.NETHER_STAR) {
+            player.openInventory(manager.createTaskMenu(playerId, questFile));
             return;
         }
         if (clicked.getType() == Material.NAME_TAG) {
@@ -173,7 +218,8 @@ public class QuestGuiListener implements Listener {
             return;
         }
         if (clicked.getType() == Material.ARROW) {
-            player.openInventory(manager.createMainMenu(playerId, manager.getCurrentPage(playerId)));
+            String guild = manager.getGuildForQuest(questFile);
+            player.openInventory(manager.createGuildQuestMenu(playerId, guild, manager.getCurrentPage(playerId)));
         }
     }
 
@@ -191,7 +237,8 @@ public class QuestGuiListener implements Listener {
             } catch (IOException e) {
                 player.sendMessage(ChatColor.RED + "Failed to delete quest: " + e.getMessage());
             }
-            player.openInventory(manager.createMainMenu(player.getUniqueId(), manager.getCurrentPage(player.getUniqueId())));
+            String guild = manager.getGuildForQuest(questFile);
+            player.openInventory(manager.createGuildQuestMenu(player.getUniqueId(), guild, manager.getCurrentPage(player.getUniqueId())));
             return;
         }
         if (clicked.getType() == Material.GREEN_WOOL) {
@@ -199,16 +246,59 @@ public class QuestGuiListener implements Listener {
         }
     }
 
+    private void handleTaskMenuClick(Player player, int slot, ItemStack clicked) {
+        UUID playerId = player.getUniqueId();
+        Path questFile = manager.getSelectedQuest(playerId);
+        if (questFile == null) {
+            player.closeInventory();
+            return;
+        }
+
+        if (slot == 45) {
+            try {
+                manager.addTask(questFile);
+                player.openInventory(manager.createTaskMenu(playerId, questFile));
+                player.sendMessage(ChatColor.GREEN + "Added a new task.");
+            } catch (IOException e) {
+                player.sendMessage(ChatColor.RED + "Failed to add task: " + e.getMessage());
+            }
+            return;
+        }
+        if (slot == 49) {
+            player.openInventory(manager.createQuestMenu(playerId, questFile));
+            return;
+        }
+
+        Map<Integer, String> slots = manager.getTaskMenuSlots(playerId);
+        if (!slots.containsKey(slot)) {
+            return;
+        }
+        String taskKey = slots.get(slot);
+        QuestGuiManager.QuestDifficulty difficulty = manager.getTaskDifficulty(questFile, taskKey);
+        QuestGuiManager.QuestDifficulty next = difficulty.next();
+        try {
+            manager.updateTaskDifficulty(questFile, taskKey, next);
+            player.openInventory(manager.createTaskMenu(playerId, questFile));
+            player.sendMessage(ChatColor.YELLOW + "Task " + taskKey + " difficulty set to " + next.getDisplayName() + ChatColor.YELLOW + ".");
+        } catch (IOException e) {
+            player.sendMessage(ChatColor.RED + "Failed to update task difficulty: " + e.getMessage());
+        }
+    }
+
     private void handleCreate(Player player, String fileName) throws IOException {
         Path questsDir = manager.getQuestsDirectory();
-        Path newFile = resolveQuestFile(questsDir, fileName);
+        String guild = manager.getSelectedGuild(player.getUniqueId());
+        Path targetDir = guild == null || guild.equals("Без гильдии")
+                ? questsDir
+                : questsDir.resolve(guild);
+        Path newFile = resolveQuestFile(targetDir, fileName);
         if (Files.exists(newFile)) {
             player.sendMessage(ChatColor.RED + "That quest file already exists.");
             manager.beginChatInput(player.getUniqueId(), QuestGuiManager.ChatAction.CREATE, null);
             player.sendMessage(ChatColor.YELLOW + "Enter a different file name (or type 'cancel').");
             return;
         }
-        Files.createDirectories(questsDir);
+        Files.createDirectories(targetDir);
         Files.writeString(newFile, defaultTemplate(), StandardCharsets.UTF_8);
         player.sendMessage(ChatColor.GREEN + "Quest created: " + newFile.getFileName());
         manager.openEditor(player, newFile);
