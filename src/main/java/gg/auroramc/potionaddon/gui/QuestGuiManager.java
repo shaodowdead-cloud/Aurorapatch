@@ -36,12 +36,57 @@ public class QuestGuiManager {
     public static final String QUEST_TITLE_PREFIX = ChatColor.DARK_GREEN + "Quest: ";
     public static final String TASKS_TITLE_PREFIX = ChatColor.DARK_PURPLE + "Tasks: ";
     public static final String DELETE_TITLE_PREFIX = ChatColor.DARK_RED + "Delete quest: ";
+    public static final String TASK_ACTION_TITLE_PREFIX = ChatColor.DARK_BLUE + "Task action: ";
 
     private static final int QUESTS_PER_PAGE = 45;
     private static final int GUILDS_PER_PAGE = 45;
     private static final int TASKS_PER_PAGE = 45;
     private static final DateTimeFormatter DATE_FORMATTER =
             DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm", Locale.ENGLISH).withZone(ZoneId.systemDefault());
+    private static final List<String> TASK_ACTIONS = List.of(
+            "FISH",
+            "BLOCK_SHEAR",
+            "BLOCK_SHEAR_LOOT",
+            "BREED",
+            "BREW",
+            "RUN_COMMAND",
+            "CONSUME",
+            "CRAFT",
+            "EARN_EXP",
+            "FARM",
+            "MILK",
+            "BLOCK_BREAK",
+            "BLOCK_LOOT",
+            "BLOCK_PLACE",
+            "BUILD",
+            "ENCHANT",
+            "KILL_MOB",
+            "KILL_LEVELLED_MOB",
+            "KILL_PLAYER",
+            "ENTITY_LOOT",
+            "SHEAR",
+            "SHEAR_LOOT",
+            "SMELT",
+            "TAME",
+            "GAIN_AURASKILLS_XP",
+            "GAIN_AURORA_LEVEL",
+            "GAIN_AURORA_XP",
+            "INTERACT_NPC",
+            "SELL_WORTH",
+            "SELL",
+            "BUY",
+            "BUY_WORTH",
+            "INTERACT_SHOPKEEPER",
+            "TRADE_SHOPKEEPER",
+            "ENTER_REGION",
+            "COMPLETE_DUNGEON",
+            "TAKE_ITEM",
+            "ENTER_WORLD",
+            "DEAL_DAMAGE",
+            "BREAK_ITEM",
+            "TRAVEL",
+            "PLACEHOLDER"
+    );
 
     private final PotionConsumeAddon plugin;
     private final Path questsDirectory;
@@ -52,8 +97,10 @@ public class QuestGuiManager {
     private final Map<UUID, Path> selectedQuest = new HashMap<>();
     private final Map<UUID, String> selectedGuild = new HashMap<>();
     private final Map<UUID, Map<Integer, String>> taskMenuSlots = new HashMap<>();
+    private final Map<UUID, Map<Integer, String>> taskActionMenuSlots = new HashMap<>();
     private final Map<UUID, Path> editingQuest = new HashMap<>();
     private final Map<UUID, PendingChatInput> pendingChatInputs = new HashMap<>();
+    private final Map<UUID, String> selectedTask = new HashMap<>();
 
     public QuestGuiManager(PotionConsumeAddon plugin) {
         this.plugin = plugin;
@@ -208,7 +255,7 @@ public class QuestGuiManager {
             lore.add(ChatColor.GRAY + "Amount: " + ChatColor.WHITE + amount);
             lore.add(ChatColor.GRAY + "Task number: " + taskNumber);
             lore.add(ChatColor.YELLOW + "Left click: change difficulty");
-            lore.add(ChatColor.YELLOW + "Right click: set action");
+            lore.add(ChatColor.YELLOW + "Right click: choose action");
             lore.add(ChatColor.YELLOW + "Shift click: set amount");
             meta.setLore(lore);
             item.setItemMeta(meta);
@@ -222,6 +269,35 @@ public class QuestGuiManager {
                 Collections.singletonList(ChatColor.GRAY + "Create a new task with easy difficulty")));
         inventory.setItem(49, createMenuItem(Material.ARROW, ChatColor.GRAY + "Back",
                 Collections.singletonList(ChatColor.GRAY + "Return to quest menu")));
+
+        return inventory;
+    }
+
+    public Inventory createTaskActionMenu(UUID playerId, Path questFile, String taskKey) {
+        selectedQuest.put(playerId, questFile);
+        selectedTask.put(playerId, taskKey);
+        Inventory inventory = Bukkit.createInventory(null, 54,
+                TASK_ACTION_TITLE_PREFIX + ChatColor.WHITE + questFile.getFileName().toString());
+        Map<Integer, String> slotMap = new HashMap<>();
+
+        int slot = 0;
+        for (String action : TASK_ACTIONS) {
+            if (slot >= 45) {
+                break;
+            }
+            ItemStack item = new ItemStack(Material.PAPER);
+            ItemMeta meta = item.getItemMeta();
+            meta.setDisplayName(ChatColor.AQUA + action);
+            meta.setLore(Collections.singletonList(ChatColor.YELLOW + "Click to set action"));
+            item.setItemMeta(meta);
+            inventory.setItem(slot, item);
+            slotMap.put(slot, action);
+            slot++;
+        }
+        taskActionMenuSlots.put(playerId, slotMap);
+
+        inventory.setItem(49, createMenuItem(Material.ARROW, ChatColor.GRAY + "Back",
+                Collections.singletonList(ChatColor.GRAY + "Return to tasks")));
 
         return inventory;
     }
@@ -287,6 +363,14 @@ public class QuestGuiManager {
         return taskMenuSlots.getOrDefault(playerId, Collections.emptyMap());
     }
 
+    public Map<Integer, String> getTaskActionMenuSlots(UUID playerId) {
+        return taskActionMenuSlots.getOrDefault(playerId, Collections.emptyMap());
+    }
+
+    public String getSelectedTask(UUID playerId) {
+        return selectedTask.get(playerId);
+    }
+
     public int getCurrentPage(UUID playerId) {
         return currentQuestPage.getOrDefault(playerId, 0);
     }
@@ -311,6 +395,8 @@ public class QuestGuiManager {
         selectedQuest.remove(playerId);
         selectedGuild.remove(playerId);
         taskMenuSlots.remove(playerId);
+        taskActionMenuSlots.remove(playerId);
+        selectedTask.remove(playerId);
     }
 
     private void ensureQuestsDirectory() {
