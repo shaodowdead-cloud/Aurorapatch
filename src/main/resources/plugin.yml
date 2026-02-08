@@ -8,3 +8,12 @@ description: |
   Provides a custom consume handler that differentiates potion base types and levels when players
   drink a potion. It reflects into AuroraQuests at runtime to progress the appropriate
   Consume objectives based on the potion consumed.
+commands:
+  questgui:
+    description: Open the AuroraQuests GUI quest editor.
+    permission: auroraquests.gui
+    usage: /questgui
+permissions:
+  auroraquests.gui:
+    description: Allows access to the GUI quest editor.
+    default: op
