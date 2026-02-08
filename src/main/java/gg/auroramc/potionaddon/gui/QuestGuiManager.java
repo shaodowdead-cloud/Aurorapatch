@@ -197,13 +197,19 @@ public class QuestGuiManager {
             String taskKey = taskKeys.get(i);
             int taskNumber = i + 1;
             QuestDifficulty difficulty = getTaskDifficulty(questFile, taskKey);
+            String action = getTaskAction(questFile, taskKey);
+            int amount = getTaskAmount(questFile, taskKey);
             ItemStack item = new ItemStack(difficulty.getMaterial(), Math.min(64, taskNumber));
             ItemMeta meta = item.getItemMeta();
             meta.setDisplayName(ChatColor.AQUA + "Task #" + taskNumber + ChatColor.GRAY + " (" + taskKey + ")");
             List<String> lore = new ArrayList<>();
             lore.add(ChatColor.GRAY + "Difficulty: " + difficulty.getDisplayName());
+            lore.add(ChatColor.GRAY + "Action: " + ChatColor.WHITE + action);
+            lore.add(ChatColor.GRAY + "Amount: " + ChatColor.WHITE + amount);
             lore.add(ChatColor.GRAY + "Task number: " + taskNumber);
-            lore.add(ChatColor.YELLOW + "Click to change difficulty");
+            lore.add(ChatColor.YELLOW + "Left click: change difficulty");
+            lore.add(ChatColor.YELLOW + "Right click: set action");
+            lore.add(ChatColor.YELLOW + "Shift click: set amount");
             meta.setLore(lore);
             item.setItemMeta(meta);
             inventory.setItem(slot, item);
@@ -254,7 +260,11 @@ public class QuestGuiManager {
     }
 
     public void beginChatInput(UUID playerId, ChatAction action, Path questFile) {
-        pendingChatInputs.put(playerId, new PendingChatInput(action, questFile, selectedGuild.get(playerId)));
+        pendingChatInputs.put(playerId, new PendingChatInput(action, questFile, null, selectedGuild.get(playerId)));
+    }
+
+    public void beginTaskChatInput(UUID playerId, ChatAction action, Path questFile, String taskKey) {
+        pendingChatInputs.put(playerId, new PendingChatInput(action, questFile, taskKey, selectedGuild.get(playerId)));
     }
 
     public PendingChatInput consumeChatInput(UUID playerId) {
@@ -382,11 +392,13 @@ public class QuestGuiManager {
     public static class PendingChatInput {
         private final ChatAction action;
         private final Path questFile;
+        private final String taskKey;
         private final String guildName;
 
-        public PendingChatInput(ChatAction action, Path questFile, String guildName) {
+        public PendingChatInput(ChatAction action, Path questFile, String taskKey, String guildName) {
             this.action = action;
             this.questFile = questFile;
+            this.taskKey = taskKey;
             this.guildName = guildName;
         }
 
@@ -398,6 +410,10 @@ public class QuestGuiManager {
             return questFile;
         }
 
+        public String getTaskKey() {
+            return taskKey;
+        }
+
         public String getGuildName() {
             return guildName;
         }
@@ -406,7 +422,9 @@ public class QuestGuiManager {
     public enum ChatAction {
         CREATE,
         RENAME,
-        DUPLICATE
+        DUPLICATE,
+        SET_TASK_ACTION,
+        SET_TASK_AMOUNT
     }
 
     public enum QuestDifficulty {
@@ -506,6 +524,28 @@ public class QuestGuiManager {
     public void updateTaskDifficulty(Path questFile, String taskKey, QuestDifficulty difficulty) throws IOException {
         YamlConfiguration config = YamlConfiguration.loadConfiguration(questFile.toFile());
         config.set("tasks." + taskKey + ".difficulty", difficulty.name());
+        config.save(questFile.toFile());
+    }
+
+    public String getTaskAction(Path questFile, String taskKey) {
+        YamlConfiguration config = YamlConfiguration.loadConfiguration(questFile.toFile());
+        return config.getString("tasks." + taskKey + ".task", "CONSUME");
+    }
+
+    public int getTaskAmount(Path questFile, String taskKey) {
+        YamlConfiguration config = YamlConfiguration.loadConfiguration(questFile.toFile());
+        return Math.max(1, config.getInt("tasks." + taskKey + ".args.amount", 1));
+    }
+
+    public void updateTaskAction(Path questFile, String taskKey, String action) throws IOException {
+        YamlConfiguration config = YamlConfiguration.loadConfiguration(questFile.toFile());
+        config.set("tasks." + taskKey + ".task", action);
+        config.save(questFile.toFile());
+    }
+
+    public void updateTaskAmount(Path questFile, String taskKey, int amount) throws IOException {
+        YamlConfiguration config = YamlConfiguration.loadConfiguration(questFile.toFile());
+        config.set("tasks." + taskKey + ".args.amount", amount);
         config.save(questFile.toFile());
     }
 
