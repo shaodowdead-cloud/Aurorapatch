@@ -64,7 +64,7 @@ public class QuestGuiListener implements Listener {
             return;
         }
         if (title.startsWith(QuestGuiManager.TASKS_TITLE_PREFIX)) {
-            handleTaskMenuClick(player, event.getSlot(), clicked);
+            handleTaskMenuClick(player, event, clicked);
             return;
         }
         handleQuestMenuClick(player, clicked);
@@ -111,6 +111,8 @@ public class QuestGuiListener implements Listener {
                     case CREATE -> handleCreate(event.getPlayer(), message);
                     case RENAME -> handleRename(event.getPlayer(), pending.getQuestFile(), message);
                     case DUPLICATE -> handleDuplicate(event.getPlayer(), pending.getQuestFile(), message);
+                    case SET_TASK_ACTION -> handleTaskAction(event.getPlayer(), pending.getQuestFile(), pending.getTaskKey(), message);
+                    case SET_TASK_AMOUNT -> handleTaskAmount(event.getPlayer(), pending.getQuestFile(), pending.getTaskKey(), message);
                     default -> {
                     }
                 }
@@ -246,7 +248,7 @@ public class QuestGuiListener implements Listener {
         }
     }
 
-    private void handleTaskMenuClick(Player player, int slot, ItemStack clicked) {
+    private void handleTaskMenuClick(Player player, InventoryClickEvent event, ItemStack clicked) {
         UUID playerId = player.getUniqueId();
         Path questFile = manager.getSelectedQuest(playerId);
         if (questFile == null) {
@@ -254,6 +256,7 @@ public class QuestGuiListener implements Listener {
             return;
         }
 
+        int slot = event.getSlot();
         if (slot == 45) {
             try {
                 manager.addTask(questFile);
@@ -274,6 +277,18 @@ public class QuestGuiListener implements Listener {
             return;
         }
         String taskKey = slots.get(slot);
+        if (event.isShiftClick()) {
+            player.closeInventory();
+            manager.beginTaskChatInput(playerId, QuestGuiManager.ChatAction.SET_TASK_AMOUNT, questFile, taskKey);
+            player.sendMessage(ChatColor.YELLOW + "Enter required amount for task " + taskKey + " (or type 'cancel').");
+            return;
+        }
+        if (event.isRightClick()) {
+            player.closeInventory();
+            manager.beginTaskChatInput(playerId, QuestGuiManager.ChatAction.SET_TASK_ACTION, questFile, taskKey);
+            player.sendMessage(ChatColor.YELLOW + "Enter action for task " + taskKey + " (or type 'cancel').");
+            return;
+        }
         QuestGuiManager.QuestDifficulty difficulty = manager.getTaskDifficulty(questFile, taskKey);
         QuestGuiManager.QuestDifficulty next = difficulty.next();
         try {
@@ -327,6 +342,48 @@ public class QuestGuiListener implements Listener {
         Files.copy(questFile, newFile);
         player.sendMessage(ChatColor.GREEN + "Quest duplicated: " + newFile.getFileName());
         player.openInventory(manager.createQuestMenu(player.getUniqueId(), newFile));
+    }
+
+    private void handleTaskAction(Player player, Path questFile, String taskKey, String action) throws IOException {
+        if (questFile == null || taskKey == null) {
+            player.sendMessage(ChatColor.RED + "No task selected.");
+            return;
+        }
+        String normalized = action.trim().toUpperCase(Locale.ENGLISH);
+        if (normalized.isEmpty()) {
+            player.sendMessage(ChatColor.RED + "Action cannot be empty.");
+            manager.beginTaskChatInput(player.getUniqueId(), QuestGuiManager.ChatAction.SET_TASK_ACTION, questFile, taskKey);
+            player.sendMessage(ChatColor.YELLOW + "Enter action for task " + taskKey + " (or type 'cancel').");
+            return;
+        }
+        manager.updateTaskAction(questFile, taskKey, normalized);
+        player.openInventory(manager.createTaskMenu(player.getUniqueId(), questFile));
+        player.sendMessage(ChatColor.GREEN + "Task " + taskKey + " action set to " + normalized + ".");
+    }
+
+    private void handleTaskAmount(Player player, Path questFile, String taskKey, String amountInput) throws IOException {
+        if (questFile == null || taskKey == null) {
+            player.sendMessage(ChatColor.RED + "No task selected.");
+            return;
+        }
+        int amount;
+        try {
+            amount = Integer.parseInt(amountInput.trim());
+        } catch (NumberFormatException e) {
+            player.sendMessage(ChatColor.RED + "Amount must be a number.");
+            manager.beginTaskChatInput(player.getUniqueId(), QuestGuiManager.ChatAction.SET_TASK_AMOUNT, questFile, taskKey);
+            player.sendMessage(ChatColor.YELLOW + "Enter required amount for task " + taskKey + " (or type 'cancel').");
+            return;
+        }
+        if (amount < 1) {
+            player.sendMessage(ChatColor.RED + "Amount must be at least 1.");
+            manager.beginTaskChatInput(player.getUniqueId(), QuestGuiManager.ChatAction.SET_TASK_AMOUNT, questFile, taskKey);
+            player.sendMessage(ChatColor.YELLOW + "Enter required amount for task " + taskKey + " (or type 'cancel').");
+            return;
+        }
+        manager.updateTaskAmount(questFile, taskKey, amount);
+        player.openInventory(manager.createTaskMenu(player.getUniqueId(), questFile));
+        player.sendMessage(ChatColor.GREEN + "Task " + taskKey + " amount set to " + amount + ".");
     }
 
     private Path resolveQuestFile(Path questsDir, String fileName) {
