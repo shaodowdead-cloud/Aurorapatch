@@ -59,8 +59,8 @@ public class QuestGuiManager {
         this.plugin = plugin;
         Plugin auroraQuests = Bukkit.getPluginManager().getPlugin("AuroraQuests");
         this.questsDirectory = auroraQuests != null
-                ? auroraQuests.getDataFolder().toPath().resolve("quests")
-                : plugin.getDataFolder().toPath().resolve("quests");
+                ? auroraQuests.getDataFolder().toPath().resolve("quest_pools")
+                : plugin.getDataFolder().toPath().resolve("quest_pools");
         ensureQuestsDirectory();
     }
 

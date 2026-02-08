@@ -305,8 +305,8 @@ public class QuestGuiListener implements Listener {
     }
 
     private void handleRename(Player player, Path questFile, String newName) throws IOException {
-        Path questsDir = manager.getQuestsDirectory();
-        Path newFile = resolveQuestFile(questsDir, newName);
+        Path targetDir = questFile.getParent() != null ? questFile.getParent() : manager.getQuestsDirectory();
+        Path newFile = resolveQuestFile(targetDir, newName);
         if (Files.exists(newFile)) {
             player.sendMessage(ChatColor.RED + "That quest file already exists.");
             manager.beginChatInput(player.getUniqueId(), QuestGuiManager.ChatAction.RENAME, questFile);
@@ -319,8 +319,8 @@ public class QuestGuiListener implements Listener {
     }
 
     private void handleDuplicate(Player player, Path questFile, String newName) throws IOException {
-        Path questsDir = manager.getQuestsDirectory();
-        Path newFile = resolveQuestFile(questsDir, newName);
+        Path targetDir = questFile.getParent() != null ? questFile.getParent() : manager.getQuestsDirectory();
+        Path newFile = resolveQuestFile(targetDir, newName);
         if (Files.exists(newFile)) {
             player.sendMessage(ChatColor.RED + "That quest file already exists.");
             manager.beginChatInput(player.getUniqueId(), QuestGuiManager.ChatAction.DUPLICATE, questFile);
