@@ -17,6 +17,10 @@ import java.lang.reflect.Method;
 import java.util.Collection;
 import java.util.List;
 
+import gg.auroramc.potionaddon.gui.QuestGuiCommand;
+import gg.auroramc.potionaddon.gui.QuestGuiListener;
+import gg.auroramc.potionaddon.gui.QuestGuiManager;
+
 /**
  * Add-on for AuroraQuests that differentiates potion consumption by base type and level.
  *
@@ -51,6 +55,7 @@ import java.util.List;
  * do nothing if AuroraQuests is not present or if the internal API changes in future versions.</p>
  */
 public final class PotionConsumeAddon extends JavaPlugin implements Listener {
+    private QuestGuiManager questGuiManager;
 
     @Override
     public void onEnable() {
@@ -60,6 +65,11 @@ public final class PotionConsumeAddon extends JavaPlugin implements Listener {
             return;
         }
         Bukkit.getPluginManager().registerEvents(this, this);
+        questGuiManager = new QuestGuiManager(this);
+        Bukkit.getPluginManager().registerEvents(new QuestGuiListener(questGuiManager), this);
+        if (getCommand("questgui") != null) {
+            getCommand("questgui").setExecutor(new QuestGuiCommand(questGuiManager));
+        }
         getLogger().info("PotionConsumeAddon enabled and listening for potion consumption events.");
     }
 
