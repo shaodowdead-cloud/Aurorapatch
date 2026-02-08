@@ -286,11 +286,8 @@ public class QuestGuiListener implements Listener {
     }
 
     private void handleCreate(Player player, String fileName) throws IOException {
-        Path questsDir = manager.getQuestsDirectory();
         String guild = manager.getSelectedGuild(player.getUniqueId());
-        Path targetDir = guild == null || guild.equals("Без гильдии")
-                ? questsDir
-                : questsDir.resolve(guild);
+        Path targetDir = manager.resolveQuestDirectory(guild);
         Path newFile = resolveQuestFile(targetDir, fileName);
         if (Files.exists(newFile)) {
             player.sendMessage(ChatColor.RED + "That quest file already exists.");

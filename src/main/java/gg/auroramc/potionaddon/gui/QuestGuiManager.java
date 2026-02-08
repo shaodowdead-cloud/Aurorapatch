@@ -315,7 +315,7 @@ public class QuestGuiManager {
         if (!Files.exists(questsDirectory)) {
             return Collections.emptyList();
         }
-        try (Stream<Path> stream = Files.walk(questsDirectory, 2)) {
+        try (Stream<Path> stream = Files.walk(questsDirectory, 3)) {
             return stream
                     .filter(path -> !Files.isDirectory(path))
                     .filter(path -> path.getFileName().toString().endsWith(".yml")
@@ -451,10 +451,31 @@ public class QuestGuiManager {
 
     private String resolveGuildName(Path questFile) {
         Path relative = questsDirectory.relativize(questFile);
+        if (relative.getNameCount() == 1) {
+            return "Без гильдии";
+        }
+        if (relative.getName(0).toString().equalsIgnoreCase("quest")) {
+            return "Без гильдии";
+        }
+        if (relative.getNameCount() > 2 && relative.getName(1).toString().equalsIgnoreCase("quest")) {
+            return relative.getName(0).toString();
+        }
         if (relative.getNameCount() > 1) {
             return relative.getName(0).toString();
         }
         return "Без гильдии";
+    }
+
+    public Path resolveQuestDirectory(String guild) {
+        Path baseDir = questsDirectory;
+        if (guild != null && !"Без гильдии".equals(guild)) {
+            baseDir = questsDirectory.resolve(guild);
+        }
+        Path questDir = baseDir.resolve("quest");
+        if (Files.isDirectory(questDir)) {
+            return questDir;
+        }
+        return baseDir;
     }
 
     public String getGuildForQuest(Path questFile) {
